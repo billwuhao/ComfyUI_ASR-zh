@@ -59,9 +59,10 @@ def convert_subtitle_format(data):
   # Join all lines with a newline character
   return "\n".join(lines)
 
+
+MODEL_CACHE = None
 class ASRZhRun:
     def __init__(self):
-        self.model_cache = None
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.dtype = "default"
 
@@ -102,17 +103,18 @@ class ASRZhRun:
             self.device = "cpu"
             self.dtype = "int8"
 
-        if self.model_cache is None:
+        global MODEL_CACHE
+        if MODEL_CACHE is None:
             print(f"Loading ASR model from: {model_path}")
             if not os.path.exists(model_path):
                 raise FileNotFoundError(f"Model file not found: {model_path}. Please check paths.")
             
-            self.model_cache = WhisperModel(model_path, device=self.device, compute_type=self.dtype)
+            MODEL_CACHE = WhisperModel(model_path, device=self.device, compute_type=self.dtype)
 
-        segments, info = self.model_cache.transcribe(audio_file, word_timestamps=True)
+        segments, info = MODEL_CACHE.transcribe(audio_file, word_timestamps=True)
         segments = list(segments)
         if unload_model:
-            self.model_cache = None
+            MODEL_CACHE = None
             torch.cuda.empty_cache()
 
         texts = "".join([segment.text for segment in segments])
